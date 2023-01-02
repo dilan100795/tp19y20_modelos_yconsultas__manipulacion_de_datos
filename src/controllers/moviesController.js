@@ -1,8 +1,8 @@
-const path = require('path');
+const { response } = require('express');
 const db = require('../database/models');
 const sequelize = db.sequelize;
-const { Op } = require("sequelize");
-const moment = require('moment');
+const { validationResult } = require('express-validator');
+
 
 //Otra forma de llamar a los modelos
 const Movies = db.Movie;
@@ -20,7 +20,7 @@ const moviesController = {
                 res.render('moviesDetail.ejs', {movie});
             });
     },
-    'new': (req, res) => {
+    'nuevo': (req, res) => {
         db.Movie.findAll({
             order : [
                 ['release_date', 'DESC']
@@ -44,78 +44,81 @@ const moviesController = {
                 res.render('recommendedMovies.ejs', {movies});
             });
     }, //Aqui debemos modificar y completar lo necesario para trabajar con el CRUD
+
+
     add: function (req, res) {
-        let promGenres = Genres.findAll();
-        let promActors = Actors.findAll();
-        
-        Promise
-        .all([promGenres, promActors])
-        .then(([allGenres, allActors]) => {
-            return res.render(path.resolve(__dirname, '..', 'views',  'moviesAdd'), {allGenres,allActors})})
-        .catch(error => res.send(error))
+        db.Genre.findAll()
+        .then(genres => {
+            return res.render('moviesAdd',{genres}) 
+        })
     },
-    create: function (req,res) {
-        Movies
-        .create(
-            {
-                title: req.body.title,
-                rating: req.body.rating,
-                awards: req.body.awards,
-                release_date: req.body.release_date,
-                length: req.body.length,
-                genre_id: req.body.genre_id
-            }
-        )
-        .then(()=> {
-            return res.redirect('/movies')})            
-        .catch(error => res.send(error))
+    create: (req, res) => {
+        let errors = validationResult(req)
+
+        if (errors.isEmpty()) {
+        db.Movie.create({
+            title: req.body.title,
+            rating: +req.body.rating,
+            awards: +req.body.awards,
+            release_date: Date(req.body.release_date),
+            length: +req.body.length,
+            genre_id: +req.body.genre,
+            created_at: new Date,
+            update_at: new Date
+        })
+        .then(movie => {
+            //return res.send(movie)
+            res.redirect('/movies')
+        })
+    } else {
+        res.render('moviesAdd', {errors})
+    }
     },
-    edit: function(req,res) {
-        let movieId = req.params.id;
-        let promMovies = Movies.findByPk(movieId,{include: ['genre','actors']});
-        let promGenres = Genres.findAll();
-        let promActors = Actors.findAll();
-        Promise
-        .all([promMovies, promGenres, promActors])
-        .then(([Movie, allGenres, allActors]) => {
-            Movie.release_date = moment(Movie.release_date).format('L');
-            return res.render(path.resolve(__dirname, '..', 'views',  'moviesEdit'), {Movie,allGenres,allActors})})
-        .catch(error => res.send(error))
+    edit: function(req, res) {
+        db.Movie.findByPk(req.params.id)
+            .then(movie => {
+                res.render('moviesEdit', {Movie:movie});
+            })
+            .catch(error => res.send(error))
     },
     update: function (req,res) {
-        let movieId = req.params.id;
-        Movies
-        .update(
-            {
-                title: req.body.title,
-                rating: req.body.rating,
-                awards: req.body.awards,
-                release_date: req.body.release_date,
-                length: req.body.length,
-                genre_id: req.body.genre_id
-            },
-            {
-                where: {id: movieId}
-            })
-        .then(()=> {
-            return res.redirect('/movies')})            
-        .catch(error => res.send(error))
+        let idParams = +req.params.id
+        
+        db.Movie.update({
+            title: req.body.title,
+            rating: +req.body.rating,
+            awards: +req.body.awards,
+            release_date: req.body.release_date,
+            length: +req.body.length
+        },{
+            where:{id:idParams}
+        })
+        .then(pelicula => {
+            res.redirect(`/movies/detail/${idParams}`)
+        })
+        .catch(errors => res.sens(errors))
+    
+
     },
-    delete: function (req,res) {
-        let movieId = req.params.id;
-        Movies
-        .findByPk(movieId)
-        .then(Movie => {
-            return res.render(path.resolve(__dirname, '..', 'views',  'moviesDelete'), {Movie})})
-        .catch(error => res.send(error))
+    deleteMovie: function (req, res) {
+        let idParams = +req.params.id
+
+        db.Movie.findOne({
+            where: {id:idParams}
+        })
+        .then(movie => {
+            res.render('moviesDelete',{Movie:movie})
+        })
     },
-    destroy: function (req,res) {
-        let movieId = req.params.id;
-        Movies
-        .destroy({where: {id: movieId}, force: true}) // force: true es para asegurar que se ejecute la acción
-        .then(()=>{
-            return res.redirect('/movies')})
-        .catch(error => res.send(error)) 
+    destroy: function (req, res) {
+        let idParams = +req.params.id
+
+        db.Movie.destroy({
+            where:{id:idParams}
+        })
+        .then(pelicula => {
+            res.redirect('/movies')
+        })
     }
 
 }

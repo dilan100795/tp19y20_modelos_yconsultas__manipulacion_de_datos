@@ -8,6 +8,7 @@
 
 </head>
 <body>
+    <%- include('./partials/header') %> 
     <figure>
         <img src="/img/logo-DH.png" alt="Logo Digital House">
     </figure>
@@ -15,8 +16,11 @@
     <br>
     <p>RATING: <%= movie.rating %> </p>
     <p>AWARDS: <%= movie.awards %> </p>
-    <p>LENGTH: <%= movie.length + ' min'%> </p>
+    <p>LENGTH: <%= movie.length + 'min'%> </p>
     <p>RELEASE DATE: <%= movie.release_date %> </p>
-
+    <br>
+    <a  href="/movies/edit/<%= movie.id %> ">Editar Película</a></p>
+    <a  href="/movies/delete/<%= movie.id %> ">Eliminar Película</a></p>
+    
 </body>
 </html>
